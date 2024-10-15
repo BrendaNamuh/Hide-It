@@ -7,6 +7,9 @@
     "default_popup": "popup.html",
     "default_icon": "popup.png"
   },
+  "content_security_policy": {
+    "extension_pages": "img-src 'self' http://127.0.0.1:5000; script-src 'self';"
+  },
   "content_scripts": [
     {
       "js": ["scripts/content.js"],

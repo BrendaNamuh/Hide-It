@@ -2,7 +2,7 @@
 /*Define stylesheet */
 const link = document.createElement('link');
 link.rel = 'stylesheet';
-link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css';
+//link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css';
 document.head.appendChild(link);
 
 //References
@@ -11,17 +11,22 @@ var button = {'like':{'right':'8%','icon':'fa-smile-o'},'dislike':{'right':'2%',
 window.addEventListener('load', function() {
     
     // Executed on page load
+    console.log('Extracting Posts ..')
     var data = get_posts()
-    feed_data(data);
+    console.log('Processing Posts..')
+    var triggering_posts = feed_data(data);
     
     window.addEventListener('scroll', function() {
+      
 
         var scrollPosition = window.innerHeight + window.pageYOffset;
         var documentHeight = document.documentElement.offsetHeight;
 
         // Check if the user has reached the bottom of the page
         if (scrollPosition >= documentHeight) {
+          console.log('Extracting Posts ..')
           data = get_posts();
+          console.log('Processing Posts')
           feed_data(data);
         }
 
@@ -31,81 +36,131 @@ window.addEventListener('load', function() {
 // scrape reddit posts from user feed
 function get_posts() {
     var data = []
-    loaded_posts = document.querySelectorAll("div[data-click-id='background']");
+   
+    //const loaded_posts = document.querySelectorAll('div[data-testid="post-container"]');
+    
+    //const feed = document.querySelector('shreddit-feed');
+    //'w-full m-0'
+  //   console.log(feed)
+  //   const posts_in_feed = feed.children;
+  //   console.log('Children')
+  //   let children = Array.from(posts_in_feed)
+  //   children.forEach(child => {
+  //     console.log(child.tagName); // Logs each child's tag name individually
+  // });
+    //console.log(articlesArray)
+    // console.log(posts_in_feed)
+    // const posts = Array.from(posts_in_feed);
+    // console.log(posts);
 
-    for (var i = 0, len = loaded_posts.length; i < len; i++) {
-      option_bar = ''
-      try {
-        
-        option_bar = loaded_posts[i].querySelector('._1ixsU4oQRnNfZ91jhBU74y').querySelector('._3-miAEojrCvx_4FQ8x3P-s').querySelector('._21pmAV9gWG6F_UKVe7YIE0')
-      } catch (error) {
-        // Code to handle the error
-        option_bar = loaded_posts[i].querySelector('._3-miAEojrCvx_4FQ8x3P-s').querySelector('._21pmAV9gWG6F_UKVe7YIE0')
-      }
+    // Get the <body> element
+    //const body = document.body;
+    let feed = document.querySelector('shreddit-feed');
+    
+    console.log('Feed: ')
+    console.log(feed)
+    loaded_posts = feed.querySelectorAll('ARTICLE')
+    
 
-      option_bar.appendChild(createButton('dislike'));
 
-      // get title
-      var post = loaded_posts[i].getElementsByTagName('h3')[0].innerHTML;
-      // get text if the post has it
-      paragraphs = loaded_posts[i].getElementsByTagName('p');
+    loaded_posts.forEach(postElement => {
+      // let option_bar = '';
+      // try {
+      //     option_bar = postElement.querySelector('._1ixsU4oQRnNfZ91jhBU74y')
+      //         .querySelector('._3-miAEojrCvx_4FQ8x3P-s')
+      //         .querySelector('._21pmAV9gWG6F_UKVe7YIE0');
+      // } catch (error) {
+      //     // Handle the error by using the alternative query
+      //     option_bar = postElement.querySelector('._3-miAEojrCvx_4FQ8x3P-s')
+      //         .querySelector('._21pmAV9gWG6F_UKVe7YIE0');
+      // }
+      // option_bar.appendChild(createButton('dislike'));
+  
+      // Get title
+      let title = postElement.getAttribute('aria-label');
+      console.log(title)
+      // let post = postElement.getElementsByTagName('h3')[0].innerHTML;
+      // // Get text if the post has it
+      // let paragraphs = postElement.getElementsByTagName('p');
       
-      for (var p = 0, length = paragraphs.length; p<length; p++) {
-
-          // don't include text about why user is seeing the post
-          dont_include = ["Popular near you", "Suggested", "Promoted", 
-                          "Because you visited this community before",
-                          "Popular on Reddit right now", "Videos that redditors liked",
-                          "Some redditors find this funny", 
-                          "Because you've shown interest in a similar community"];
-          if (!dont_include.includes(paragraphs[p].innerHTML)) {
-              var clean_post = removeHtmlTags(paragraphs[p].innerHTML)
-              post = post.concat(" ", clean_post);
-          }
-      }
-      data.push(post);
-      
-    }
+      // Array.from(paragraphs).forEach(paragraph => {
+      //     // Don't include text about why user is seeing the post
+      //     const dont_include = [
+      //         "Popular near you", "Suggested", "Promoted", 
+      //         "Because you visited this community before",
+      //         "Popular on Reddit right now", "Videos that redditors liked",
+      //         "Some redditors find this funny", 
+      //         "Because you've shown interest in a similar community"
+      //     ];
+          
+      //     if (!dont_include.includes(paragraph.innerHTML)) {
+      //         let clean_post = removeHtmlTags(paragraph.innerHTML);
+      //         post = post.concat(" ", clean_post);
+      //     }
+      // });
+  
+      data.push(title);
+  });
+    
 
     return data
   }
 
 // send user posts to model in server api, get back label for each post
-function feed_data(data,loaded_posts) {
-    var loaded_posts = document.querySelectorAll("div[data-click-id='background']");
+function feed_data(data) {
+  //Selects all div elements in the DOM with the attribute data-click-id equal to background.
+    var loaded_posts = document.querySelectorAll("article");
+    
     
     // access user preferences
+    //Uses the Chrome Extensions API to retrieve the user’s saved preferences from chrome.storage.sync
     chrome.storage.sync.get('triggers').then(trigger_response => {
       triggers = trigger_response.triggers
       chrome.storage.sync.get('threshold').then(threshold_response => {
           threshold = threshold_response.threshold
           user_prefs = {'triggers':triggers, 'threshold':threshold, "data":data}
+                console.log('Selected triggers: ',triggers)
 
-                //console.log(triggers)
-
-                // Send a POST request to the Python server
-                result = fetch('http://localhost:5000/api/submit', {
+                //Send a POST request to the Python server
+                //A fetch call is made to send a POST request to the Flask backend at the specified URL
+                //'http://127.0.0.1:5000/api/data'
+                //result = fetch('http://localhost:5000/api/submit', {
+                result =  fetch('http://127.0.0.1:5000/api/submit', {
                     method: 'POST',
                     headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
                     },
                     mode: 'cors',
                     body: JSON.stringify(user_prefs)
                 })
+            
+                    // Processes the response from the server, 
+                    //Converting it from JSON format to a JavaScript object.
                     .then(response => response.json())
                     .then(result => {
                     // Process the response from the Python server
                     // put response into dict
-                    labelled_posts = [];
-                    //console.log(result)
+                    //labelled_posts = [];
+                    
+                    labelled_posts = {};
                     for (const key in result) {
                         labelled_posts[`${key}`] = `${result[key]}`
+                        
                     }
                     // hide posts on user end
+                    console.log('Labelled Posts:')
                     console.log(labelled_posts)
-                    for (const [key, value] of Object.entries(labelled_posts)) {
-                      hidePost(loaded_posts[key]);
-                    }
+                    // for (const [key, value] of Object.entries(labelled_posts)) {
+                    //   hidePost(loaded_posts[key]);
+                    // }
+                    //console.log(loaded_posts[0])
+                    hidePost(loaded_posts[0])
+                    // hidePost(loaded_posts[1])
+                    // loaded_posts.forEach(post =>{
+                    //   console.log(post)
+                    //   hidePost(post)
+                    // })
                     
                     })
                     .catch(error => {
@@ -127,64 +182,85 @@ function removeHtmlTags(text) {
 }
 
   function hidePost(post) {
+    //post.style.filter = 'blur(10px)';
     
-    // Add like button to post
-    option_bar = post.querySelector('._1ixsU4oQRnNfZ91jhBU74y').querySelector('._3-miAEojrCvx_4FQ8x3P-s').querySelector('._21pmAV9gWG6F_UKVe7YIE0')
-    option_bar.appendChild(createButton('like'))
+    // Extract width, and height of post to hide
+    let width = post.getBoundingClientRect().width;
+    let height = post.getBoundingClientRect().height
 
-    // Get post's div element
-    const parent_div = post.parentNode;
-    
-    // Create and style cover
+    // Create cover element
     var cover = document.createElement("div");
+    // Style cover element
     cover.style.position = "absolute";
-    cover.style.left = 0 + "px";
-    cover.style.top = 0 + "px";
-    cover.style.width = parent_div.getBoundingClientRect().width+"px";
-    cover.style.height = parent_div.getBoundingClientRect().height + "px";
+    cover.style.border = '2px solid red';
     cover.style.background = 'white';
-    cover.style.borderRadius = '5px'
-    cover.style.zIndex = "3";
-    cover.style.display = 'flex';
-    cover.style.justifyContent ='center';
-    cover.appendChild(unhideButton(cover));
-   
-    // Append cover to post 
-    parent_div.appendChild(cover);
+    cover.style.width = width +'px' ;
+    cover.style.height = height+'px';
+    cover.style.zIndex = '1' ;
+    //cover.style.filter = 'blur(5px)';
+    //cover.background ='rgba(247, 247, 255, 0.88)'
+    cover.style.top = post.offsetTop +'px' ;
+    cover.style.left = post.offsetLeft +'px' ;
 
-   
- 
+    // Set the background image using the correct URL
+    //cover.style.backgroundImage = 'url(http://127.0.0.1:5000/static/popup.png)'; // Update to your Flask static URL
+    //cover.style.backgroundImage = 'url(https://raw.githubusercontent.com/BrendaNamuh/Hide-It/main/chrome-ext/popup.png)';
+    cover.style.backgroundImage = 'url(../popup.png)';
+    cover.style.backgroundSize = 'contain'; // Scale the image to fit
+    cover.style.backgroundRepeat = 'no-repeat'; // Prevent repeating
+    cover.style.backgroundPosition = 'center'; // Center the image
+    // Add unhide button to cover
+    //cover.appendChild(getUnhideButton(cover));
+
+    // Add cover to post 
+    post.appendChild(cover)
+     
   }
-  // Adds unhide button to div
-  function unhideButton(div){
+  // Returns unhide button to div
+  function getUnhideButton(div){
     // Create a text element
-    var textElement = document.createElement("button");
+    var unhideButton = document.createElement("button");
+    unhideButton.style.background = 'transparent'
 
     // Set the text content
-    textElement.innerHTML = "See post";
+    unhideButton.innerHTML = "See post";
     
     // Apply initial styles
-    textElement.style.color = "gray";
-    textElement.style.position = "absolute"
-    textElement.style.bottom = "5%";
-    textElement.style.transition = "color 0.25s ease";
+    unhideButton.style.color = "white";
+    unhideButton.style.position = "absolute"
+    unhideButton.style.width = "100%";
+    unhideButton.style.height = "25%";
+    unhideButton.style.bottom = '0px';
+    unhideButton.style.fontSize = "18px";
+
+    // Create line on cover
+    line = document.createElement('div')
+    line.style.width ='65%'
+    line.style.height = '1px'
+    line.style.background='white'
+    line.style.position = 'absolute'
+    line.style.top = '10%'
+    //Center horizontally
+    line.style.left = '50%';
+    line.style.transform = 'translateX(-50%)';
+    unhideButton.appendChild(line)
 
     // Add event listener for click event
-    textElement.addEventListener("click", function() {  
+    unhideButton.addEventListener("click", function() {  
       div.remove();
     });
 
     // Add event listener for hover effect
-    textElement.addEventListener("mouseover", function() {
-      // Mouse hover effect: fade to black
-      textElement.style.color = "black";
-    });
+    // unhideButton.addEventListener("mouseover", function() {
+    //   // Mouse hover effect: fade to black
+    //   unhideButton.style.color = "black";
+    // });
 
-    textElement.addEventListener("mouseout", function() {
-      // Mouse hover effect: revert back to gray
-      textElement.style.color = "gray";
-    });
-    return textElement
+    // unhideButton.addEventListener("mouseout", function() {
+    //   // Mouse hover effect: revert back to gray
+    //   unhideButton.style.color = "gray";
+    // });
+    return unhideButton
     
 
   }
